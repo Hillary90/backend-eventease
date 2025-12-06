@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Firebase Test</title>
+  <!-- Firebase compat scripts -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+</head>
+<body>
+
+<h2>Firebase Login Test</h2>
+
+<button id="loginBtn">Login with Test User</button>
+
+<pre id="output"></pre>
+
+<script>
+  // Replace with your Firebase project config
+  const firebaseConfig = {
+    apiKey: "AIzaSyA246Ne0niXpnBRwGTOZuAMOicS8kOeC1o",
+    authDomain: "eventease-c1eb4.firebaseapp.com",
+    projectId: "eventease-c1eb4",
+  };
+
+  // Initialize Firebase
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+
+  // Login function
+  async function login() {
+    try {
+      const email = "test@example.com";
+      const password = "test123456";
+
+      const userCredential = await auth.signInWithEmailAndPassword(email, password);
+      const token = await userCredential.user.getIdToken();
+
+      document.getElementById("output").innerText = token;
+    } catch (error) {
+      document.getElementById("output").innerText = "Error: " + error.message;
+    }
+  }
+
+  // Attach click handler
+  document.getElementById("loginBtn").onclick = login;
+</script>
+
+</body>
+</html>
