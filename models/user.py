@@ -11,5 +11,6 @@ class User(Base):
     email = Column(String, unique=True, index=True, nullable=False)
     password = Column(String, nullable=True)
 
-    # Event relationship
+    # Relationships
     events = relationship("Event", back_populates="organizer")
+    bookings = relationship("Booking", back_populates="user")
