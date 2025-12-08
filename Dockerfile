@@ -8,10 +8,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq-dev \
  && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements and install
-COPY requirements.txt ./
+# Copy requirements files and install. If a minimal production requirements file
+# `requirements.prod.txt` exists, prefer it to avoid complex dependency resolution
+# during builds on CI/hosts like Render.
+COPY requirements*.txt ./
 RUN python -m pip install --upgrade pip
-RUN pip install --no-cache-dir -r requirements.txt
+RUN if [ -f requirements.prod.txt ]; then \
+            echo "Installing from requirements.prod.txt"; \
+            pip install --no-cache-dir -r requirements.prod.txt; \
+        else \
+            echo "Installing from requirements.txt"; \
+            pip install --no-cache-dir -r requirements.txt; \
+        fi
 
 # Copy application
 COPY . /app
