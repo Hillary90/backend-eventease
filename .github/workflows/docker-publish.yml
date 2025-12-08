@@ -17,12 +17,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - id: set_image
-        name: Compute lowercased IMAGE name for GHCR
-        run: |
-          IMAGE_NAME=ghcr.io/$(echo $GITHUB_REPOSITORY | tr '[:upper:]' '[:lower:]')
-          echo "image=$IMAGE_NAME" >> $GITHUB_OUTPUT
-
       - name: Mask secrets in logs
         # Prevent accidental leakage of secret values in job logs by adding them to the Actions mask
         env:
@@ -68,20 +62,6 @@ jobs:
             echo "No Firebase service account secret provided; skipping."
           fi
 
-      - name: Use trimmed requirements for CI build (reduce dependency conflicts)
-        run: |
-          echo "Creating minimal requirements.txt for CI build"
-          cat > requirements.txt <<'REQ'
-          fastapi==0.124.0
-          uvicorn==0.33.0
-          gunicorn==20.1.0
-          pydantic==1.10.12
-          SQLAlchemy==2.0.44
-          firebase-admin==6.9.0
-          psycopg2-binary==2.9.11
-          requests==2.32.4
-          REQ
-
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
 
@@ -102,8 +82,8 @@ jobs:
           file: ./Dockerfile
           push: true
           tags: |
-            ${{ steps.set_image.outputs.image }}:latest
-            ${{ steps.set_image.outputs.image }}:${{ github.sha }}
+            ghcr.io/${{ github.repository_owner }}/backend-eventease:latest
+            ghcr.io/${{ github.repository_owner }}/backend-eventease:${{ github.sha }}
 
       - name: Trigger Render deploy (optional)
         env:

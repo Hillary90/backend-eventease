@@ -8,18 +8,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq-dev \
  && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements files and install. If a minimal production requirements file
-# `requirements.prod.txt` exists, prefer it to avoid complex dependency resolution
-# during builds on CI/hosts like Render.
-COPY requirements*.txt ./
+# Copy requirements and install
+COPY requirements.txt ./
 RUN python -m pip install --upgrade pip
-RUN if [ -f requirements.prod.txt ]; then \
-            echo "Installing from requirements.prod.txt"; \
-            pip install --no-cache-dir -r requirements.prod.txt; \
-        else \
-            echo "Installing from requirements.txt"; \
-            pip install --no-cache-dir -r requirements.txt; \
-        fi
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application
 COPY . /app
@@ -27,11 +19,7 @@ COPY . /app
 ENV PYTHONUNBUFFERED=1
 ENV PORT=8000
 
-# Copy entrypoint/start script and make executable
-COPY start.sh /app/start.sh
-RUN chmod +x /app/start.sh
-
 EXPOSE 8000
 
-# Use the start script so we can write serviceAccountKey.json from env at container start
-ENTRYPOINT ["/app/start.sh"]
+# Start the app with Gunicorn + Uvicorn worker
+CMD ["gunicorn", "-k", "uvicorn.workers.UvicornWorker", "app.main:app", "-b", "0.0.0.0:8000", "--workers", "1"]
