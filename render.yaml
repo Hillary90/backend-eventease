@@ -1,0 +1,35 @@
+# Minimal Render configuration for repository-based deployment.
+# Replace placeholders below (repo, branch, region) with your values before applying.
+
+services:
+  - type: web
+    name: backend-eventease
+    env: docker
+    repo: hillary90/backend-eventease    # replace if different
+    branch: final-intergration           # replace with the branch you want to deploy (e.g. main)
+    plan: starter                        # change to "starter", "standard", etc. as needed
+    dockerfilePath: Dockerfile
+    buildCommand: ""
+    startCommand: ""
+    envVars:
+      - key: PORT
+        value: "8000"
+      - key: DATABASE_URL
+        # Leave empty here and link to the managed database below or set in Render UI
+        value: ""
+      - key: FIREBASE_SERVICE_ACCOUNT_BASE64
+        # Mark this value as secure in Render UI. Prefer base64-encoded JSON.
+        value: ""
+        secure: true
+
+databases:
+  - name: eventease-db
+    plan: starter
+    region: oregon         # replace with your preferred Render region (e.g. oregon)
+    postgresVersion: "15"
+
+# Notes:
+# - After creating this file in the repository, you can create the service in Render
+#   and Render will create the managed Postgres database defined above.
+# - In the Render dashboard, set the value for `FIREBASE_SERVICE_ACCOUNT_BASE64` and/or
+#   `DATABASE_URL` as secure environment variables for the service.
