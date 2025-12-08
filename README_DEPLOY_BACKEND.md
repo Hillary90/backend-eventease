@@ -25,6 +25,30 @@ How the workflow uses the secrets
 - The Docker build then runs and will include `serviceAccountKey.json` in the build context if it exists.
 - After building the image, the workflow pushes it to GHCR and optionally triggers a Render deploy using `RENDER_API_KEY` and `RENDER_SERVICE_ID`.
 
+Runtime handling on Render
+
+- The Docker image now uses an entrypoint script `start.sh` which, at container start, will check for either `FIREBASE_SERVICE_ACCOUNT_BASE64` or `FIREBASE_SERVICE_ACCOUNT` environment variables and write a `serviceAccountKey.json` file into the container filesystem. This means you should set one of those env vars in Render's dashboard (or via `render.yaml`) rather than trying to bake the file into the image.
+
+Setting secrets on Render
+
+- In your Render service settings (Environment > Environment Variables) add:
+  - `DATABASE_URL` = your Postgres URL (Render provides with managed DB)
+  - `FIREBASE_SERVICE_ACCOUNT_BASE64` = base64(serviceAccountKey.json) OR `FIREBASE_SERVICE_ACCOUNT` = raw JSON
+  - `PORT` = `8000` (optional; default is 8000)
+
+Deploying to Render using Docker
+
+1. Create a new Web Service in Render.
+2. For "Environment", choose "Docker".
+3. Connect the repository `backend-eventease` and choose the branch (`main` or `final-intergration`).
+4. (Optional) Provide a `render.yaml` or configure the service in the Render UI. Ensure Environment Variables above are set.
+5. Trigger a deploy — Render will build the container and run it. On startup the container will write `serviceAccountKey.json` from the env and start the app.
+
+Notes
+
+- Avoid storing `serviceAccountKey.json` directly in the repo. Use secrets.
+- If you prefer not to use the entrypoint copy method, Render also supports adding files via Start Command or mounting from a private store; the entrypoint method is the simplest.
+
 How to add secrets in GitHub
 
 1. Go to your repository on GitHub.
