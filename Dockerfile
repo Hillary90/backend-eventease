@@ -19,11 +19,7 @@ COPY . /app
 ENV PYTHONUNBUFFERED=1
 ENV PORT=8000
 
-# Copy entrypoint/start script and make executable
-COPY start.sh /app/start.sh
-RUN chmod +x /app/start.sh
-
 EXPOSE 8000
 
-# Use the start script so we can write serviceAccountKey.json from env at container start
-ENTRYPOINT ["/app/start.sh"]
+# Start the app with Gunicorn + Uvicorn worker
+CMD ["gunicorn", "-k", "uvicorn.workers.UvicornWorker", "app.main:app", "-b", "0.0.0.0:8000", "--workers", "1"]
