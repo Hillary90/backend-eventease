@@ -14,7 +14,6 @@ db_users = {}
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
-# Backend JWT login
 class LoginRequest(BaseModel):
     email: str
     password: str
@@ -30,7 +29,11 @@ def register(payload: UserRegister):
         password=payload.password
     )
     db_users[payload.email] = new_user
-    return new_user
+    return UserOut(
+        id=new_user.id,
+        name=new_user.name,
+        email=new_user.email
+    )
 
 @router.post("/login")
 def login(payload: LoginRequest):
@@ -49,23 +52,24 @@ def me(token: str = Depends(oauth2_scheme)):
         user = db_users.get(data["email"])
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
-        return user
+        return UserOut(
+            id=user.id,
+            name=user.name,
+            email=user.email
+        )
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid JWT")
 
-# Firebase login
-@router.get("/me-firebase", response_model=User)
+@router.get("/me-firebase", response_model=UserOut)
 def me_firebase(token: str = Depends(oauth2_scheme)):
     decoded_token = firebase.verify_firebase_token(token)
-    if not decoded_token:
-        raise HTTPException(status_code=401, detail="Invalid Firebase token")
-    return User(
+
+    return UserOut(
         id=decoded_token["uid"],
         name=decoded_token.get("name", "No Name"),
         email=decoded_token.get("email", "No Email")
     )
 
-# Optional test route
 @router.get("/test-auth")
 def test_auth():
     return {"message": "Auth route works"}
