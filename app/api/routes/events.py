@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from typing import List
 from app.db.database import get_db
 from app.core.security import get_current_user
 
@@ -16,7 +17,7 @@ def create_event(event: EventCreate, db: Session = Depends(get_db), current_user
         title=event.title,
         description=event.description,
         date=event.date,
-        organizer_id=current_user["id"]
+        organizer_id=current_user.id
     )
 
     db.add(new_event)
@@ -25,10 +26,25 @@ def create_event(event: EventCreate, db: Session = Depends(get_db), current_user
     return new_event
 
 
-# GETting  ALL EVENTS
-@router.get("/all", response_model=list[EventOut])
+# GETting ALL EVENTS
+@router.get("/all")
 def get_events(db: Session = Depends(get_db)):
-    return db.query(Event).all()
+    try:
+        events = db.query(Event).all()
+        result = []
+        for e in events:
+            result.append({
+                "id": e.id,
+                "title": e.title,
+                "description": e.description,
+                "date": e.date.isoformat() if e.date else None,
+                "location": getattr(e, "location", None),
+                "organizer_id": e.organizer_id,
+            })
+        return result
+    except Exception as exc:
+        # Return a generic error to the client and let server logs capture details
+        raise HTTPException(status_code=500, detail=str(exc))
 
 
 #to  get EVENT BY ID
@@ -50,7 +66,7 @@ def update_event(event_id: int, update: EventUpdate, db: Session = Depends(get_d
     if not event:
         raise HTTPException(404, "Event not found")
 
-    if event.organizer_id != current_user["id"]:
+    if event.organizer_id != current_user.id:
         raise HTTPException(403, "Not authorized")
 
     event.title = update.title
@@ -61,20 +77,7 @@ def update_event(event_id: int, update: EventUpdate, db: Session = Depends(get_d
     db.refresh(event)
     return event
 
-# DELETE EVENT
-@router.delete("/delete/{event_id}")
-def delete_event(event_id: int, db: Session = Depends(get_db), current_user: dict = Depends(get_current_user)):
-    event = db.query(Event).filter(Event.id == event_id).first()
 
-    if not event:
-        raise HTTPException(404, "Event not found")
-
-    if event.organizer_id != current_user["id"]:
-        raise HTTPException(403, "Not authorized")
-
-    db.delete(event)
-    db.commit()
-    return {"message": "Event deleted successfully"}
 
 # DELETE EVENT
 @router.delete("/delete/{event_id}")
@@ -84,9 +87,8 @@ def delete_event(event_id: int, db: Session = Depends(get_db), current_user: dic
     if not event:
         raise HTTPException(404, "Event not found")
 
-    if event.organizer_id != current_user["id"]:
+    if event.organizer_id != current_user.id:
         raise HTTPException(403, "Not authorized")
-
     db.delete(event)
     db.commit()
 

@@ -5,6 +5,9 @@ import jwt, os
 from pydantic import BaseModel
 from core import firebase
 from fastapi.security import OAuth2PasswordBearer
+from datetime import datetime, timedelta
+from sqlalchemy.orm import Session
+from app.db.database import get_db
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 SECRET = os.getenv("JWT_SECRET", "supersecret")

@@ -11,7 +11,9 @@ class Event(Base):
     title = Column(String, nullable=False)
     description = Column(String, nullable=True)
     date = Column(DateTime, default=datetime.datetime.utcnow)
+    location = Column(String, nullable=True)
 
     organizer_id = Column(Integer, ForeignKey("users.id"), nullable=False)
 
     organizer = relationship("User", back_populates="events")
+    bookings = relationship("Booking", back_populates="event")
