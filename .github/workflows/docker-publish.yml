@@ -82,8 +82,8 @@ jobs:
           file: ./Dockerfile
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/backend-eventease:latest
-            ghcr.io/${{ github.repository_owner }}/backend-eventease:${{ github.sha }}
+            ghcr.io/${{ toLower(github.repository_owner) }}/backend-eventease:latest
+            ghcr.io/${{ toLower(github.repository_owner) }}/backend-eventease:${{ github.sha }}
 
       - name: Trigger Render deploy (optional)
         env:
