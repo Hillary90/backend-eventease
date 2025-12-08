@@ -1,0 +1,108 @@
+name: Build and publish Docker image
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Mask secrets in logs
+        # Prevent accidental leakage of secret values in job logs by adding them to the Actions mask
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          FIREBASE_SERVICE_ACCOUNT_BASE64: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BASE64 }}
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          # Only invoke add-mask when the secret variable is present; do NOT print the secret itself.
+          if [ -n "$FIREBASE_SERVICE_ACCOUNT" ]; then
+            echo "Masking FIREBASE_SERVICE_ACCOUNT"
+            echo "::add-mask::$FIREBASE_SERVICE_ACCOUNT"
+          fi
+          if [ -n "$FIREBASE_SERVICE_ACCOUNT_BASE64" ]; then
+            echo "Masking FIREBASE_SERVICE_ACCOUNT_BASE64"
+            echo "::add-mask::$FIREBASE_SERVICE_ACCOUNT_BASE64"
+          fi
+          if [ -n "$RENDER_API_KEY" ]; then
+            echo "Masking RENDER_API_KEY"
+            echo "::add-mask::$RENDER_API_KEY"
+          fi
+          if [ -n "$DATABASE_URL" ]; then
+            echo "Masking DATABASE_URL"
+            echo "::add-mask::$DATABASE_URL"
+          fi
+
+      - name: Write Firebase service account file (optional)
+        # Supports either raw JSON in FIREBASE_SERVICE_ACCOUNT or a base64 value
+        env:
+          FIREBASE_SERVICE_ACCOUNT_BASE64: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BASE64 }}
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          set -e
+          if [ -n "$FIREBASE_SERVICE_ACCOUNT_BASE64" ]; then
+            echo "Writing serviceAccountKey.json from FIREBASE_SERVICE_ACCOUNT_BASE64"
+            echo "$FIREBASE_SERVICE_ACCOUNT_BASE64" | base64 --decode > serviceAccountKey.json
+            chmod 600 serviceAccountKey.json
+          elif [ -n "$FIREBASE_SERVICE_ACCOUNT" ]; then
+            echo "Writing serviceAccountKey.json from FIREBASE_SERVICE_ACCOUNT"
+            printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > serviceAccountKey.json
+            chmod 600 serviceAccountKey.json
+          else
+            echo "No Firebase service account secret provided; skipping."
+          fi
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push image to GHCR
+        uses: docker/build-push-action@v4
+        with:
+          context: ./
+          file: ./Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/backend-eventease:latest
+            ghcr.io/${{ github.repository_owner }}/backend-eventease:${{ github.sha }}
+
+      - name: Trigger Render deploy (optional)
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
+        if: ${{ env.RENDER_API_KEY && env.RENDER_SERVICE_ID }}
+        run: |
+          echo "Triggering Render deploy for service $RENDER_SERVICE_ID"
+          curl -X POST "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys" \
+            -H "Authorization: Bearer $RENDER_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d '{"clearCache": true}'
+
+      - name: 'Cleanup: remove Firebase service account file'
+        if: ${{ always() }}
+        run: |
+          if [ -f serviceAccountKey.json ]; then
+            echo "Removing serviceAccountKey.json for hygiene"
+            shred -u serviceAccountKey.json || rm -f serviceAccountKey.json
+          else
+            echo "No serviceAccountKey.json found — nothing to remove"
+          fi

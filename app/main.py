@@ -12,16 +12,17 @@ app = FastAPI(
 )
 
 # CORS setup
-origins = [
-    "*",
-]
+origins = ["*"]
 
+# Use permissive CORS for development. Do not use allow_credentials=True together
+# with allow_origins=["*"] in production — that combination is rejected by browsers.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 # Include API routes

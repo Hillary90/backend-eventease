@@ -1,11 +1,16 @@
+import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 
-DATABASE_URL = "sqlite:///./eventease.db"
+# Allow DATABASE_URL to be provided by the environment (e.g. Render Postgres).
+# If not set, fall back to a local SQLite file for development.
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./eventease.db")
 
-engine = create_engine(
-    DATABASE_URL, connect_args={"check_same_thread": False}
-)
+connect_args = {}
+if DATABASE_URL.startswith("sqlite"):
+    connect_args = {"check_same_thread": False}
+
+engine = create_engine(DATABASE_URL, connect_args=connect_args)
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
