@@ -1,12 +1,3 @@
-<<<<<<< HEAD
-from fastapi import APIRouter
-
-router = APIRouter()
-
-@router.get("/test-auth")
-def test_auth():
-    return {"message": "Auth route works"}
-=======
 from fastapi import APIRouter, HTTPException, Header, Depends
 from schemas.user import UserRegister, UserOut
 from models.user import User
@@ -73,4 +64,8 @@ def me_firebase(token: str = Depends(oauth2_scheme)):
         name=decoded_token.get("name", "No Name"),
         email=decoded_token.get("email", "No Email")
     )
->>>>>>> 9b24205 (Add Firebase login + backend JWT authentication)
+
+# Optional test route
+@router.get("/test-auth")
+def test_auth():
+    return {"message": "Auth route works"}
